@@ -31,7 +31,13 @@
   --serif:Georgia,"Times New Roman",serif;
 }
 body{height:100vh;height:100dvh;overflow:hidden;display:flex;align-items:center;justify-content:center;
-  background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  /* ⚠️ 2026-10-17 修（用户反馈「部署到网址后左右两边有灰边、背景填不满」）：
+     这里原来是中性灰 #f4f4f4。机型框等比放大后（03_shell.js 的 fit）短边铺满，
+     另一条边仍会剩几像素 —— 灰底会把那道缝显出来（就是截图里那两条灰边）。
+     换成与框内 .wall 同族的主题底：剩下的几像素与框内背景同色，看不出接缝。
+     黑白皮肤下跟着去色（见 D 区 body.mono 覆盖）。 */
+  background:linear-gradient(168deg,#f1eaec 0%,#e8e0e4 46%,#ded6db 100%);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
   color:#3d3d3d;-webkit-font-smoothing:antialiased}
 .stage{width:390px;height:844px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;
   transform-origin:center center}
@@ -200,12 +206,17 @@ body.mono .ann-days.on{color:#4a4a4a}
   -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:var(--ink)}
 .app .lb{font-size:10px;color:var(--ink-2)}
 
-/* ---------- 一整张微倾的拍立得（装饰位，单图） ---------- */
+/* ---------- 一整张微倾的拍立得（可点：换相片位那张图，2026-10-17 用户要求） ---------- */
 .polaroid-cell{position:relative}
 .polaroid{position:absolute;inset:3px 2px 1px 2px;display:flex;flex-direction:column;
   background:#fff;border-radius:6px;padding:9px 9px 30px;transform:rotate(-2.5deg);
-  box-shadow:0 8px 20px rgba(122,100,110,.20),0 1px 3px rgba(122,100,110,.10)}
+  box-shadow:0 8px 20px rgba(122,100,110,.20),0 1px 3px rgba(122,100,110,.10);
+  cursor:pointer}
 .polaroid .ph{flex:1 1 auto;min-height:0;border-radius:3px;box-shadow:0 1px 4px rgba(70,60,66,.16);position:relative}
+/* 相片位有用户自己的图时：铺满不拉伸；⚠️ `filter:none` 是必须的 ——
+   黑白皮肤那条 `body.mono .ph2{filter:grayscale(1)}` 是给**默认渐变占位**去色用的，
+   用户自己传的照片在黑白皮肤下也该保持原色（与壁纸/头像同口径）。 */
+.polaroid .ph.has-img{background-size:cover;background-position:center;background-repeat:no-repeat;filter:none}
 .polaroid .cap{position:absolute;left:0;right:0;bottom:8px;text-align:center;pointer-events:none;
   font-family:var(--hand);font-size:12px;color:#2f2c29}
 /* ---------- 皮肤切换按钮 ---------- */
@@ -402,7 +413,8 @@ body.mono .memory-layout .w-fn,body.mono .board .draw-strip{
    毛玻璃关掉（在黑白灰里它是杂色来源），emoji 类字形整行去色。
    ============================================================ */
 body.mono{--ink:#3d3d3d;--ink-2:#8c8c8c;--ink-3:#b3b3b3;--rose:#4a4a4a;--line:rgba(255,255,255,.92);
-  background:#f2f2f2;color:#3d3d3d}
+  /* 与 .wall 同族的去色主题底（原来这里是 #f2f2f2，机型框放大后露出的缝会显成一条灰边） */
+  background:linear-gradient(172deg,#fdfdfd 0%,#f5f5f5 52%,#ebebeb 100%);color:#3d3d3d}
 body.mono .wall{background:
   radial-gradient(120% 55% at 78% 2%,#ffffff 0%,rgba(255,255,255,0) 64%),
   radial-gradient(90% 46% at 8% 26%,#fafafa 0%,rgba(250,250,250,0) 66%),
@@ -665,7 +677,10 @@ body.mono .set-av{background:linear-gradient(150deg,#e6e6e6,#cfcfcf);color:#5a5a
       <!-- 点击分区（按用户明确要求）：白区 .sheet + 双人头像 → 进纪念日设置；
            灰区 .bg（渐变那张 = 相片槽那块）→ 换卡片背景图。
            注：.avaRow 是跨在分界线上的绝对定位装饰层，CSS 里 pointer-events:none，
-           点击会穿到它下面那一区；两颗 .ava 自己承接「进纪念日」。 -->
+           点击会穿到它下面那一区；两颗 .ava 自己承接「进纪念日」。
+           ⚠️ 左右顺序（2026-10-17 用户明确要求调换）：**左=梦角(#hmPairAva)、右=我(#hmPairAvaMe)**，
+           与版式稿相反（稿上是「我 ♡ 梦」）——这是**用户指定的偏离**，别照稿改回去。
+           id 与数据的绑定关系不变（`03_shell.js` 的 paintPairAva 不用动）。 -->
       <div class="g span4r3 w-pair">
         <div class="bg" id="hmAnnBg" data-act="anniv-bg" role="button" tabindex="0" aria-label="换卡片背景图"></div>
         <div class="sheet" data-app="anniv" role="button" tabindex="0" aria-label="纪念日设置">
@@ -675,9 +690,9 @@ body.mono .set-av{background:linear-gradient(150deg,#e6e6e6,#cfcfcf);color:#5a5a
           <div class="meta"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg><span id="hmAnnMeta">去纪念日里加一条，这里就会显示</span></div>
         </div>
         <div class="avaRow">
-          <div class="ava" id="hmPairAvaMe" data-app="anniv" role="button" tabindex="0" aria-label="纪念日设置">我</div>
-          <div class="hrt">♡</div>
           <div class="ava" id="hmPairAva" data-app="anniv" role="button" tabindex="0" aria-label="纪念日设置">梦</div>
+          <div class="hrt">♡</div>
+          <div class="ava" id="hmPairAvaMe" data-app="anniv" role="button" tabindex="0" aria-label="纪念日设置">我</div>
         </div>
       </div>
 
@@ -704,10 +719,13 @@ body.mono .set-av{background:linear-gradient(150deg,#e6e6e6,#cfcfcf);color:#5a5a
         <span class="bdg off" id="hmLetBdg">0</span>
       </div>
 
-      <!-- ④ 装饰：一整张微倾的拍立得（单图，纯装饰，不可点） -->
+      <!-- ④ 一整张微倾的拍立得（单图）—— 2026-10-17 用户要求：**点击可上传相册图片**
+           （原来写的是「纯装饰，不可点」）。交互与第13单大卡灰区同款：
+           没有图 → 直接开选图；已有图 → 给「换一张 / 恢复默认」两条路（传错了不能是死路）。
+           图落在顶层键 `S.polaroidBg`，走既有的图片层（IndexedDB，硬规则20）。 -->
       <div class="polaroid-cell">
-        <div class="polaroid">
-          <div class="ph ph2"></div>
+        <div class="polaroid" data-act="polaroid-bg" role="button" tabindex="0" aria-label="换这张拍立得的照片">
+          <div class="ph ph2" id="hmPolaroid"></div>
           <div class="cap">my little days ♡</div>
         </div>
       </div>
@@ -765,6 +783,9 @@ body.mono .set-av{background:linear-gradient(150deg,#e6e6e6,#cfcfcf);color:#5a5a
        独立输入框是有意的：第5单那次「取消导入留下 pending 标记」的教训说明一个输入框走两条
        分流容易出事，所以这里连**分流标记**也各用各的（RT.upPending 与 RT.letPending 互不干扰）。 -->
   <input type="file" id="setFile" accept="image/*" class="hide">
+  <!-- 主屏拍立得的相片位（2026-10-17 用户要求可上传）。独立输入框、独立分流：
+       与 libFile / annivBgFile / setFile 各走各的（沿用第5单「一个输入框走两条分流容易出事」的教训）。 -->
+  <input type="file" id="polaroidFile" accept="image/*" class="hide">
   <!-- base 宿主接口的自定义样式槽（本单未接美化，留给后续） -->
   <style id="cssUser"></style>
 </div></div>
@@ -898,6 +919,16 @@ body.mono .set-av{background:linear-gradient(150deg,#e6e6e6,#cfcfcf);color:#5a5a
       anBg.classList.toggle('has-img', !!bgUrl);
       anBg.setAttribute('aria-label', bgUrl ? '换卡片背景图（已有自定义背景）' : '上传图片作为卡片背景');
     }
+    /* 主屏拍立得的相片位（2026-10-17 用户要求可上传）：与大卡背景同款 ——
+       有图铺图（inline background-image 盖过 .ph2 的默认渐变），没有就退回那层渐变。
+       会话屏每次进屏重画 ⇒ 这一处必须挂在 renderHome 里（开机 / 回桌面 / 重画都走到）。 */
+    var po = document.getElementById('hmPolaroid');
+    if (po) {
+      var poUrl = String(LAST.polaroidBg || '');
+      if (poUrl) po.style.backgroundImage = 'url("' + poUrl.replace(/"/g, '%22') + '")';
+      else po.style.backgroundImage = '';
+      po.classList.toggle('has-img', !!poUrl);
+    }
     /* 双人头像：字跟着真名走；有头像图（S.avatars）时铺图，否则退回首字。 */
     var meAva = document.getElementById('hmPairAvaMe');
     if (meAva) paintPairAva(meAva, LAST.avaMe);
@@ -1011,21 +1042,40 @@ body.mono .set-av{background:linear-gradient(150deg,#e6e6e6,#cfcfcf);color:#5a5a
     if (m) m.addEventListener('click', function () { applySkin(true); });
     applySkin(saved === 'mono');
   }
-  /* 机型框适配：视口比 390×844 小时整框等比缩小（框内不重排）。
+  /* 机型框适配：整框等比缩放铺满视口（框内不重排）。
      为什么不用 CSS 媒体查询阶梯：宽、高两个方向都要满足，而 CSS 只能「后写的覆盖先写的」，
      拿不到「取两者最小」——阶梯在「矮而宽」与「高而窄」两种视口上必然有一个会失配。
-     一个 min() 就精确解决，也只剩一套机制。 */
+     一个 min() 就精确解决，也只剩一套机制。
+     ⚠️ 2026-10-17 修（用户反馈「部署到网址后打开，左右两边有灰边、背景填不满」）：
+     原来写的是 `Math.min(1, ...)` —— **上限 1** 意味着视口比 390×844 大时**只缩不放**，
+     真机（实测约 412×915）上机型框仍是 390 宽居中，两侧各露一条灰底。
+     去掉上限 ⇒ 按短边等比放大铺满，灰边消失。基准视口行为一个像素没变：
+     390×844 时 s 恰为 1（transform 清空）、更小的视口仍是 min(w/390,h/844) < 1（如 375×667 → 0.790）。 */
   function fit() {
     var st = document.querySelector('.stage');
     if (!st) return;
-    var s = Math.min(1, window.innerWidth / 390, window.innerHeight / 844);
-    st.style.transform = s < 1 ? 'scale(' + s + ')' : '';
+    var s = Math.min(window.innerWidth / 390, window.innerHeight / 844);
+    st.style.transform = s === 1 ? '' : 'scale(' + s + ')';
   }
   function boot() {
     initSkin();
     fit();
-    window.addEventListener('resize', fit);
-    window.addEventListener('orientationchange', fit);
+    /* ⚠️ 2026-10-17 加固（与上面 fit 去上限同一次改动，实测量出来的）：
+       resize 事件**可能带着过渡中的中间尺寸到达** —— 实测从 412×915 切回 390×844 时，
+       有一次事件读到的 innerWidth/innerHeight 是 401×868（正好是两头的中间值），
+       fit() 据此算出 scale(1.0284)；而**过渡结束时不一定再派发一次 resize**，
+       于是那个偏大的 scale 就一直挂在 .stage 上（真机上同理：只收到过渡态事件就会一直错）。
+       做法：立刻算一次（响应要快），再挂两次**尾部重算**（120ms / 400ms）—— 视口稳定后自愈；
+       两次是为了覆盖「过渡比 160ms 还慢」的情形（实测那次约 300ms 才稳定）。
+       开销可以忽略（只在 resize 时排两个定时器）。 */
+    var fitTimers = [];
+    function fitSoon() {
+      fitTimers.forEach(clearTimeout);
+      fitTimers = [setTimeout(fit, 120), setTimeout(fit, 400)];
+    }
+    window.addEventListener('resize', function () { fit(); fitSoon(); });
+    window.addEventListener('orientationchange', function () { fit(); fitSoon(); });
+    window.addEventListener('pageshow', fit);
     /* 接线自检：接入层接上时必须置 wired，且主屏数据要拿得到 */
     setTimeout(function () {
       if (DOTTIE.wired !== 'co30-adapter') {
@@ -7166,6 +7216,9 @@ function homeData() {
     annivTotal: (S.anniv || []).length,
     annivShow: normAnnivShow(S.annivShow, S.anniv || []),
     annivBg: String(S.annivBg || ''),
+    /* 主屏拍立得的相片位（2026-10-17 用户要求可上传）：与 annivBg 同一族 ——
+       顶层键（base 的白名单重建会丢，靠 seedAnnivKeys 每次 load 补回来）。 */
+    polaroidBg: String(S.polaroidBg || ''),
     avaMe: { ch: (anMe && anMe.ch) || '我', av: (anMe && anMe.av) || '' },
     avaTa: { ch: (anTa && anTa.ch) || '梦', av: (anTa && anTa.av) || '' }
   };
@@ -7293,6 +7346,18 @@ function paintSettings() {
     + toggle('notifyOn', '站内通知（写进通知列表）')
     + toggle('notifyBgOn', '页面在后台时发系统通知')
     + '<div class="btn-row" style="margin-top:10px"><button class="btn" data-act="ask-notify">申请系统通知权限</button></div>'
+    + '</div>'
+    /* ---- 2026-10-17 客户要求：聊天记录数据**可单独清除** ----
+       放在可操作设置的末尾、信息块之前；**只清聊天这一项**，别的一概不动（范围写在屏上，不靠用户猜）。
+       「当前 N 条」是**存档真值**（数出来的，不是估的）：让用户看得见清之前有多少、清完变成 0。 */
+    + '<div class="sechd"><h3>聊天记录</h3><span>只清这一项，别的不动</span></div>'
+    + '<div class="card">'
+    + '<div class="set-row"><span class="li-t">清除聊天记录'
+    + '<span class="li-s" style="display:block">把我和 ' + esc(ta().name) + ' 的消息往来全部清空'
+    + '（含未读标记、引用与还没回的那条）；字卡库、信箱、纪念日、头像与壁纸都不动</span></span>'
+    + '<button class="btn sm" data-act="chat-clear">清除</button></div>'
+    + '<div class="set-hint">当前共 ' + msgTotal() + ' 条消息。清空后会话页是空态「还没有聊天记录」，'
+    + '并且刷新不会把开场白又长回来。</div>'
     + '</div>'
     + '<div class="sechd"><h3>本单尚未迁移</h3><span>只列名，不给控件</span></div>'
     + '<div class="card"><div class="soon-list">表情包 · 红包 · 礼物 · 日记 · 打卡 · 碎影 · '
@@ -7582,12 +7647,23 @@ var ACTS = {
   'anniv-bg-pick': function () { annivBgPick(); },
   'anniv-bg-clear': function () { annivBgClear(); },
 
+  /* 主屏拍立得（2026-10-17 用户要求「点击可上传相册图片」）。
+     与 `anniv-bg*` 三个键同款：无图 → 直开选图；有图 → 换一张 / 恢复默认（不留死路）。 */
+  'polaroid-bg': function () { polaroidBgAction(); },
+  'polaroid-bg-pick': function () { polaroidBgPick(); },
+  'polaroid-bg-clear': function () { polaroidBgClear(); },
+
   /* 第15单 · 设置中心：名字/头像/壁纸的上传与重置。
      三个键名与客单19 的 40_act.js **逐字同名**（`up-img` 的 `data-v` 也是同一套
      `av:me` / `av:ta` / `wall:home` / `wall:chat`）—— 将来两单之间搬档、比对都能直接对上。 */
   'up-img': function (el) { profilePick(el.getAttribute('data-v') || ''); },
   'reset-av': function () { resetAvatar(); },
-  'reset-wall': function () { resetWalls(); }
+  'reset-wall': function () { resetWalls(); },
+
+  /* 2026-10-17 客户要求「设置里聊天记录数据可单独清除」：
+     两步走 —— `chat-clear` 只弹确认层（把范围写清楚），`chat-clear-do` 才真清。 */
+  'chat-clear': function () { chatClearSheet(); },
+  'chat-clear-do': function () { clearChatLog(); }
 };
 
 /* 本单**故意不登记**的动作：它们对应的屏在本单不存在。
@@ -7768,6 +7844,13 @@ function onDocChange(e) {
     var bg = t.files && t.files[0];
     t.value = '';
     if (bg) annivBgSet(bg);
+  }
+  /* 主屏拍立得的相片位（2026-10-17 用户要求可上传）：独立输入框、独立分流，
+     不与 libFile / annivBgFile / setFile 混用（第5单「一个输入框走两条分流」的教训）。 */
+  if (t.type === 'file' && t.id === 'polaroidFile') {
+    var pbg = t.files && t.files[0];
+    t.value = '';
+    if (pbg) polaroidBgSet(pbg);
   }
   /* 第15单 设置中心：改名（我的 / 梦角）。
      用 change 而不是 input：input 会在打字中途重画设置页 → 输入框被重建、焦点掉，
@@ -8165,6 +8248,19 @@ var FROZEN_PAINT_THREAD = paintThread;
 paintThread = function () {
   FROZEN_PAINT_THREAD();
   injectQuoteBlocks();                                 /* 每次重画都把引用块补回去 */
+  /* ⚠️ 2026-10-17 修（客户反馈：「我和他不管谁说话，都会被跳到中间段的聊天记录，
+     每发一句就要自己拉到最底下」）—— **根因是这里的顺序**：
+     冻结片 `lib/25_chat.js:173` 的滚底（`th.scrollTop = th.scrollHeight`）发生在
+     `innerHTML = h` 之后、**引用块插进来之前**；上面这行 `injectQuoteBlocks()` 会往每个带引用的
+     气泡**正文上方**插一块（`.q-blk`），插完 `scrollHeight` 变大，而 scrollTop 还停在旧的最大值上
+     ⇒ **最新那条被挤到视口下方**，用户看到的就是「停在中间某段、最后一条看不见」。
+     实测（真浏览器，夹具 8 个引用块 / 引用块总高 361px）：发完消息后**离底部恒 100px**，
+     末条不可见（28 条时可见区间 19~27）；把引用摘掉再重画 ⇒ 引用块 0 个、**离底部 0**（隔离量）。
+     （另：给 #thread 关掉 `overflow-anchor` 会更糟 —— 离底部 400px ⇒ 浏览器滚动锚定本来在**部分对冲**，
+       所以这里不去动锚定，只在插完之后把滚底**补一次**。）
+     补这一下与冻结片原意完全一致（它就是「每次重画都滚到底」），只是把顺序补正 ⇒ 行为不变、结果变对。 */
+  var th = $('thread');
+  if (th) th.scrollTop = th.scrollHeight;
 };
 
 /* ============================================================
@@ -8267,7 +8363,7 @@ function seedAnnivKeys() {
     var key = (B && B.state && B.state.KEY) || 'co30.state.v1';
     raw = JSON.parse((st && st.getItem(key)) || 'null');
   } catch (e) { raw = null; }
-  ['anniv', 'annivLines', 'annivGreeted', 'annivShow', 'annivBg'].forEach(function (k) {
+  ['anniv', 'annivLines', 'annivGreeted', 'annivShow', 'annivBg', 'polaroidBg'].forEach(function (k) {
     if (S[k] === undefined && raw && raw[k] !== undefined) S[k] = raw[k];
   });
   S.anniv = normAnniv(S.anniv);
@@ -8275,6 +8371,9 @@ function seedAnnivKeys() {
   if (typeof S.annivGreeted !== 'string') S.annivGreeted = '';
   S.annivShow = normAnnivShow(S.annivShow, S.anniv);
   if (typeof S.annivBg !== 'string') S.annivBg = '';
+  /* 同族：主屏拍立得的相片位（2026-10-17 加的，理由与上面五个键完全一样 ——
+     base 的逐键白名单重建也会把它丢掉。键名挂在同一个补种函数里，桥的接线一个字不用改。 */
+  if (typeof S.polaroidBg !== 'string') S.polaroidBg = '';
   return true;
 }
 /* 「卡片显示哪一条」的归一化：空 / 找不到的 id 一律回**自动**（''）。
@@ -8462,6 +8561,78 @@ function annivBgSet(file) {
   return true;
 }
 
+/* ---------- 13.4b 主屏拍立得的相片位（2026-10-17 用户要求「点击可上传相册图片」） ----------
+   相片位实测约 204×213（近方形）⇒ 走**正方形裁剪**（不拉伸、不压扁），长边上限 720
+   （够这块屏用，又不至于把存档撑大）。交互与 13.4 的大卡背景逐条同款：
+   没有图 → 直接开选图（用户要的就是这一下）；已有图 → 「换一张 / 恢复默认」两条路。 */
+var POLAROID_MAX = 720;
+function polaroidBgAction() {
+  if (String(S.polaroidBg || '')) { polaroidBgSheet(); return; }
+  polaroidBgPick();
+}
+function polaroidBgPick() {
+  var f = $('polaroidFile');
+  if (!f) { toast('选图入口没准备好'); return; }
+  f.value = '';
+  f.click();
+}
+function polaroidBgSheet() {
+  openSheet('拍立得照片',
+    '<div class="li-s" style="padding:0 0 8px">这张图会放进主屏那张拍立得的相片位。</div>',
+    [{ label: '恢复默认', act: 'polaroid-bg-clear' }, { label: '换一张', kind: 'dark', act: 'polaroid-bg-pick' }]);
+}
+function polaroidBgClear() {
+  S.polaroidBg = '';
+  saveNow();
+  closeSheet();
+  paintHome();
+  toast('已换回默认');
+}
+function polaroidBgSet(file) {
+  if (!file) return false;
+  if (!/^image\//.test(String(file.type || ''))) { toast('选一张图片文件（jpg / png / webp）'); return false; }
+  readImageFile(file, function (im) {
+    var d = cropSquareDataUrl(im, POLAROID_MAX, WALL_Q);
+    if (!d) { toast('这张图片读不出来，换一张试试'); return; }
+    S.polaroidBg = d;
+    var ok = saveNow();
+    paintHome();
+    toast(ok ? '照片换好了' : '照片换好了，但没能写进存档（存储可能满了）');
+  });
+  return true;
+}
+
+/* ---------- 13.4c 图片层的第三个槽位：让 `polaroidBg` 也进 IndexedDB（硬规则20） ----------
+   ⚠️ 必须覆盖这三个函数，不能只加一个状态键：
+     它们住在**冻结片** `lib/06_media.js` 里，槽位是**白名单**（wall 组只有 home / chat / anniv），
+     新图槽不被认的后果有两条，都很严重：
+       · `mediaCollect` 不收 ⇒ `idbBoot` / `mediaSaveToIdb` 都不会把它写进 IDB；
+       · `mediaStrippedCopy` 不摘 ⇒ 它会**留在 localStorage 的存档里**，直接违反硬规则20
+         （L105 的机检是「扫所有 key，`data:image` 次数为 0」）。
+   片一个字节不能改（S1 指纹），所以在本层**按名覆盖**：片里那三个是顶层函数声明
+   （与 bridge.js 覆盖 16 个名字同一手法，同一作用域内赋值即覆盖，调用方按名解析拿到的是新值）。
+   只多带一个 `polaroid` 键：**四组键名与形状一字不变**（wall / me / contacts / emoji）。 */
+/* ⚠️ 三条 `var` 分开写：S14 的声明识别只认逗号声明里的**第一个**，
+   写成 `var a = x, b = y, c = z;` 时后两个会被误判成「世界里不存在的名字」（工具口径，不是产品问题）。 */
+var _frozenMediaCollect = mediaCollect;
+var _frozenMediaApply = mediaApply;
+var _frozenMediaStrip = mediaStrippedCopy;
+mediaCollect = function () {
+  var m = _frozenMediaCollect();
+  if (m && m.wall) m.wall.polaroid = String(S.polaroidBg || '');
+  return m;
+};
+mediaApply = function (m) {
+  var n = _frozenMediaApply(m);
+  if (m && m.wall && typeof m.wall.polaroid === 'string' && m.wall.polaroid) { S.polaroidBg = m.wall.polaroid; n++; }
+  return n;
+};
+mediaStrippedCopy = function () {
+  var out = _frozenMediaStrip();
+  if (out) out.polaroidBg = '';        /* 摘出去（图已进 IDB），内存里的 S 不变 */
+  return out;
+};
+
 /* ---------- 13.5 TA 当天庆祝：注册进 base 的唯一调度中心 ----------
    ⚠️ 片里**没有 registerTask**（只声明了 deliverAnnivGreet）——不注册的话 TA 永远不会在
       纪念日当天来庆祝，而且一句报错都没有。
@@ -8637,6 +8808,57 @@ function resetAvatar() {
   toast('头像已恢复默认');
   return true;
 }
+/* ============================================================
+   设置中心 · 聊天记录的**单独清除**（2026-10-17 客户要求：「设置里聊天记录数据可单独清除」）
+   ------------------------------------------------------------
+   范围（只清聊天这一项，别的键一概不碰）：
+     · `S.msgs`  —— 全部会话的消息（本单单梦角，仍按键遍历，将来加人不用回头改）
+     · `S.unread`—— 未读标记（不清的话首页/列表会挂着一个指向已删消息的未读角标）
+     · 待回复队列 —— `base.scheduler.cancelLater(cid)`：不清的话 TA 还会按计划回一条
+                    「已经不存在的消息」，用户看到的是「清完自己又冒出来一条」
+     · `RT.typing` —— 打字气泡（**这一条的坑最深**：那个「关掉打字」的动作本身也住在待回复队列里，
+                     `bridge.js` 的 scheduleReply 把 `setTyping(false)` 排在 later 里；
+                     队列一取消就再也没人去关它 ⇒ 打字气泡会**永远停在那里**，看着像 TA 僵尸打字）
+   **不动**：字卡库 / 信箱 / 纪念日 / 头像 / 壁纸 / 全部设置项。
+   为什么清空后**不会**刷新又长回来：开场白由 `seedOnce()` 种，它被 localStorage 的 `co30_seed_v1` 门锁着
+   （「判据是存储里原本有没有那个键，不是会话是不是空的」—— 那句注释就是为这种场景写的）。 */
+function msgTotal() {
+  var n = 0;
+  Object.keys(S.msgs || {}).forEach(function (k) { n += ((S.msgs[k] || []).length || 0); });
+  return n;
+}
+function chatClearSheet() {
+  /* 破坏性动作**必须两步**：先弹层把范围写清楚，再确认。
+     出口留「取消」（= 关层），不留「不清了但要写点什么」这种含糊选项。 */
+  openSheet('清除聊天记录',
+    '<div class="li-s" style="padding:0 0 8px">会清掉我和 ' + esc(ta().name) + ' 的全部消息（当前 '
+    + msgTotal() + ' 条），未读标记和还没回的那条一起清。<br><br>'
+    + '<b>不会动</b>：字卡库、信箱、纪念日、头像、壁纸、以及所有设置项。<br><br>'
+    + '这一步**不能撤销**。</div>',
+    [{ label: '取消', act: 'sheet-close' }, { label: '确认清除', kind: 'dark', act: 'chat-clear-do' }]);
+}
+function clearChatLog() {
+  /* ① 消息与未读（逐键清，不是换一个空对象 —— 留着原有 cid 桶，形状与 defS 一致） */
+  Object.keys(S.msgs || {}).forEach(function (k) { S.msgs[k] = []; });
+  Object.keys(S.unread || {}).forEach(function (k) { S.unread[k] = 0; });
+  /* ② 待回复队列 + 打字态（这两条不清就是「清一半」：TA 会接着回、气泡会一直转） */
+  try { if (B && B.scheduler && B.scheduler.cancelLater) B.scheduler.cancelLater(S.cid); } catch (e) {}
+  RT.typing = false;
+  /* ③ 待引用条也一起收掉（它指向的可能是刚被清掉的那条） */
+  RT.quote = null;
+  /* ④ 落盘 + 四屏重画：设置屏（当前，要把「当前共 0 条」写出来）、首页（预览与未读角标）、
+        会话屏（空态）、会话列表（如果有） */
+  saveNow();
+  if (typeof renderQbar === 'function') renderQbar();
+  paintHome();
+  if (RT.route === 'settings') paintSettings();
+  else if (RT.route === 'chat') paintThread();
+  else if (RT.route === 'chatlist') paintChatList();
+  else refreshCurrent();
+  closeSheet();
+  toast('聊天记录已清除');
+  return true;
+}
 function resetWalls() {
   S.walls.home = ''; S.walls.chat = '';
   saveNow(); applyWalls();
@@ -8674,9 +8896,16 @@ function mediaStats() {
   var ctB = 0;
   Object.keys(m.contacts || {}).forEach(function (k) { ctB += String(m.contacts[k] || '').length; });
   if (ctB) groups.push('梦角头像 ' + fmtSize(ctB));
-  var wlB = 0;
-  Object.keys(m.wall || {}).forEach(function (k) { wlB += String(m.wall[k] || '').length; });
+  /* ⚠️ 口径修正（2026-10-17）：`m.wall` 这一组里除了两张壁纸，还挂着第13单的卡片背景图
+     （以及本次新加的拍立得相片位）—— 原来一律标成「壁纸两张」是**在界面上说假话**。
+     现在按槽位分开报，用户一眼能看出是哪张图在占地方。 */
+  var _wl = m.wall || {};
+  var wlB = String(_wl.home || '').length + String(_wl.chat || '').length;
   if (wlB) groups.push('壁纸两张 ' + fmtSize(wlB));
+  var anB = String(_wl.anniv || '').length;
+  if (anB) groups.push('卡片背景 ' + fmtSize(anB));
+  var poB = String(_wl.polaroid || '').length;
+  if (poB) groups.push('拍立得 ' + fmtSize(poB));
   var where = mediaInIdb ? '图片在 IndexedDB' : '图片没搬进 IndexedDB（在存档里）';
   return '本机存档 ' + fmtSize(txt.length) + (mediaInIdb ? '（只算文字）' : '（含图片 dataURL）')
     + ' · ' + where + '：' + (groups.length ? groups.join(' · ') : '还没有图片');
@@ -8817,6 +9046,18 @@ window.__co30 = {
   taAvatar: function (cid) { return String(taAv(cid || S.cid) || ''); },
   setName: setProfileName,
   upload: profileUpload,
+  /* 聊天记录单独清除（2026-10-17）：判据要**分开量**这五项，才能证明「清干净且没清多」
+     —— 只量 msgs 为空是看不出「未读角标还挂着 / TA 还在按计划回复 / 打字气泡一直转」的。 */
+  clearChatLog: clearChatLog,
+  msgTotal: msgTotal,
+  unreadTotal: function () {
+    var n = 0;
+    Object.keys(S.unread || {}).forEach(function (k) { n += (Number(S.unread[k]) || 0); });
+    return n;
+  },
+  pendingReplies: function (cid) { return (B && B.scheduler && B.scheduler.pendingLater) ? B.scheduler.pendingLater(cid || S.cid).length : -1; },
+  typingOn: function () { return !!RT.typing; },
+  quoteOn: function () { return !!RT.quote; },
   resetAvatar: resetAvatar,
   resetWalls: resetWalls,
   applyWalls: applyWalls,
