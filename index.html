@@ -644,6 +644,47 @@ body.mono .set-av{background:linear-gradient(150deg,#e6e6e6,#cfcfcf);color:#5a5a
 .set-th{width:64px;height:38px;border-radius:9px;flex:none;border:1px dashed var(--line);
   background-color:rgba(255,255,255,.7);background-position:center;background-size:cover;background-repeat:no-repeat;
   display:flex;align-items:center;justify-content:center;font-size:9.5px;color:var(--ink-3)}
+
+/* ============================================================
+   手机端：**直接铺满视口**（不套机型框、不做等比缩放）
+   ------------------------------------------------------------
+   ⚠️ 这一段必须留在样式表**最末尾**：它覆盖的是前面 `.stage` / `.phone` / `.board` 的基础规则，
+      同权重下**后写的赢**。第一版把它插在 `.phone` 后面（即 `.board{flex:0 0 auto}` **之前**），
+      结果被基础规则盖了回去 —— 症状是「媒体查询写了却不生效」：`.board` 实测高 766px
+      （内容自然高）而屏只有 568px，底部卡片够不着。挪到末尾后实测生效。
+   ------------------------------------------------------------
+   2026-10-17 用户第二次反馈同一条：「背景填不满画面…手机端要全屏、不要左右拖动那种」。
+   实测（真移动端模拟，判据见 _work/verify.mjs 的 [T] T9 矩阵）：
+     固定 390×844 画布 + fit() 的 **contain（取 min）** 缩放 ⇒ 屏幕比 390:844 **更矮而宽**时
+     按高度定标，机型框两侧空出 **9~32px**（320×568 空 29px、360×640 空 32px、360×740 空 9px），
+     桌面那条渐变底从缝里透出来 = 用户说的「填不满」；
+     而 transform **不改变布局尺寸**（布局宽度恒为 390）⇒ 屏宽 <390 时文档比屏幕宽，
+     真机浏览器允许视觉视口平移时就是「能左右拖」。
+   做法：窄视口下机型框尺寸**跟着视口走**（1:1、不缩放）；框内排版本来就是
+     flex 列 + 可滚动区（`.abody` / `.thread`），高度差由它们吸收 ⇒ 任何机型都铺满且内容够得着。
+   宽视口（桌面预览）**刻意保留**居中的机型框观感 —— 那是有意保留的设计，不是漏改。
+   ⚠️ 条件里除了宽度还有 **`(pointer:coarse)`（触屏）**：真机把网址当"桌面版网站"打开时
+      `<meta viewport>` 会被忽略、布局视口变 980 ⇒ 只按宽度判就**修不到**（手机仍看到中间一个小框）。
+      触屏信号与布局视口无关，能覆盖「桌面模式 / 横屏 / 平板」这些情形；桌面（细指针）实测为 false，
+      所以桌面预览的机型框一个像素不变（见 _work/verify.mjs T9c/T9d 的桌面上下文对照）。
+   ⚠️ 用 `100%` 而不是 `100vw`：`100vw` 在某些浏览器里**含纵向滚动条宽度** ⇒ 会比屏宽多出十几 px
+      （正是"能左右拖"的那一类毛病）；`100%` 取的是包含块宽度，不含滚动条。
+      高度用 `100%` 还能白拿 body 上 `height:100vh;height:100dvh` 的降级链（老安卓不认 dvh 时落到 vh）。
+   ⚠️ 这个 520 与 `03_shell.js` 的 fit() 里那个 520 **必须一致**（构建期有闸门钉着）。 */
+@media (max-width:520px),(pointer:coarse){
+  .stage{width:100%;height:100%}
+  .phone{width:100%;height:100%;border-radius:0;box-shadow:none}
+  /* 首页是固定行高的栅格（--row-h:78px）：矮屏上比屏幕高时让**栅格自己滚**，绝不裁掉内容。
+     给它 flex:1 + min-height:0 才有可滚动的约束高度（只写 overflow 是不起作用的）。 */
+  .board{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  /* 内容避让刘海/圆角（meta 里已 viewport-fit=cover）：只补内容层，不动背景层 .wall */
+  #desk,#appInner{padding-top:env(safe-area-inset-top,0px)}
+}
+/* 手机端「能左右拖」的兜底：任何情况下都不许横向溢出。
+   body 上已有 overflow:hidden，但真机（部分 Android / 内嵌浏览器）在内容比屏宽时
+   仍允许视觉视口平移；根元素这一条把横向滚动的口子彻底关掉。 */
+html{overflow-x:hidden;max-width:100%}
 </style>
 </head>
 <body>
@@ -1042,18 +1083,28 @@ body.mono .set-av{background:linear-gradient(150deg,#e6e6e6,#cfcfcf);color:#5a5a
     if (m) m.addEventListener('click', function () { applySkin(true); });
     applySkin(saved === 'mono');
   }
-  /* 机型框适配：整框等比缩放铺满视口（框内不重排）。
-     为什么不用 CSS 媒体查询阶梯：宽、高两个方向都要满足，而 CSS 只能「后写的覆盖先写的」，
-     拿不到「取两者最小」——阶梯在「矮而宽」与「高而窄」两种视口上必然有一个会失配。
-     一个 min() 就精确解决，也只剩一套机制。
-     ⚠️ 2026-10-17 修（用户反馈「部署到网址后打开，左右两边有灰边、背景填不满」）：
-     原来写的是 `Math.min(1, ...)` —— **上限 1** 意味着视口比 390×844 大时**只缩不放**，
-     真机（实测约 412×915）上机型框仍是 390 宽居中，两侧各露一条灰底。
-     去掉上限 ⇒ 按短边等比放大铺满，灰边消失。基准视口行为一个像素没变：
-     390×844 时 s 恰为 1（transform 清空）、更小的视口仍是 min(w/390,h/844) < 1（如 375×667 → 0.790）。 */
+  /* 机型框适配：
+     · **手机（窄视口 或 触屏）**：不做任何缩放 —— 机型框由 CSS（@media (max-width:520px),(pointer:coarse)）
+       直接铺满视口。这里**必须显式清掉 transform**：
+       下面 resize 的两次尾部重算会再调本函数，若把旧 scale 留在行内样式上，
+       手机会连"铺满"一起缩小（假铺满）。
+       ⚠️ 2026-10-17 用户第二次反馈「背景填不满 + 手机端能左右拖」的根因就是这里原来无条件 contain 缩放：
+          固定 390×844 画布在"矮而宽"的屏上按高度定标 ⇒ 两侧空 9~32px（填不满），
+          而 transform 不改布局宽度（恒 390）⇒ 屏宽 <390 时文档比屏幕宽 ⇒ 能左右拖。
+          触屏条件（pointer:coarse）是对「手机开了桌面版网站」那种布局视口 980 情形的加固。
+     · **桌面（细指针且视口够宽）**：保留居中的机型框，等比缩放到视口内（框是有意保留的设计）。 */
+  var FILL_MAX_W = 520;
+  /* 与 `01_shell_head.html` 的媒体查询条件**逐字对应**：窄视口 **或 触屏**。
+     ⚠️ 触屏那一条不能省：真机把网址当"桌面版网站"打开时 `<meta viewport>` 被忽略、
+        布局视口变 980 ⇒ 只按宽度判就修不到（手机仍看到中间一个小框）。桌面细指针实测为 false。 */
+  function fillMode() {
+    if (window.innerWidth <= FILL_MAX_W) return true;
+    return !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
+  }
   function fit() {
     var st = document.querySelector('.stage');
     if (!st) return;
+    if (fillMode()) { st.style.transform = ''; return; }
     var s = Math.min(window.innerWidth / 390, window.innerHeight / 844);
     st.style.transform = s === 1 ? '' : 'scale(' + s + ')';
   }
