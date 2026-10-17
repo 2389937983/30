@@ -2,7 +2,13 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- ⚠️ 2026-10-17 用户要求「界面可以放大缩小，去掉」：
+     `maximum-scale=1,user-scalable=no` 关掉手机端的双指捏合缩放（并锁死初始比例）。
+     ⚠️ 两个必须保留的：`width=device-width`（否则布局视口变 980，铺满会失效）、
+        `viewport-fit=cover`（刘海屏铺满要用它）。
+     ⚠️ iOS Safari 从 iOS 10 起**刻意忽略** user-scalable=no（无障碍策略）⇒
+        光靠这一行在 iPhone 上仍能捏合放大，另有 `touch-action` + gesture* 守卫两层（见下与 03_shell.js）。 -->
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="color-scheme" content="light">
 <title>字卡传讯 · 聊天 + 字卡库</title>
 <style>
@@ -685,6 +691,12 @@ body.mono .set-av{background:linear-gradient(150deg,#e6e6e6,#cfcfcf);color:#5a5a
    body 上已有 overflow:hidden，但真机（部分 Android / 内嵌浏览器）在内容比屏宽时
    仍允许视觉视口平移；根元素这一条把横向滚动的口子彻底关掉。 */
 html{overflow-x:hidden;max-width:100%}
+
+/* 2026-10-17 用户要求「界面可以放大缩小，去掉」——禁掉**双击放大**（并顺带消掉双击的 300ms 延迟）。
+   ⚠️ 用 `manipulation` 而不是 `none`/`pan-x pan-y`：它只去掉双击缩放，**保留纵向滚动与点按**，
+      否则会话/设置页里那些内部滚动区会一起失灵。
+   ⚠️ 捏合缩放由上面 meta 的 user-scalable=no/maximum-scale=1 关；iOS 忽略 meta ⇒ 另加 gesture* 守卫。 */
+html,body{touch-action:manipulation}
 </style>
 </head>
 <body>
@@ -1127,6 +1139,14 @@ html{overflow-x:hidden;max-width:100%}
     window.addEventListener('resize', function () { fit(); fitSoon(); });
     window.addEventListener('orientationchange', function () { fit(); fitSoon(); });
     window.addEventListener('pageshow', fit);
+    /* 手机端禁止缩放（用户 2026-10-17：「界面可以放大缩小，去掉」）。
+       三层里的第三层，专治 iOS：iOS Safari 从 iOS 10 起**刻意忽略** meta 的 user-scalable=no，
+       但它仍然派发私有的 gesture* 事件 —— 在这三个事件上 preventDefault 就能挡住捏合缩放。
+       `{passive:false}` 必须写：被动监听器里 preventDefault 不生效（会静默失效，看着像"没接上"）。
+       安卓那边 meta 已经生效，这一层是冗余兜底，对本壳无副作用（只在双指手势时触发）。 */
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+      document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+    });
     /* 接线自检：接入层接上时必须置 wired，且主屏数据要拿得到 */
     setTimeout(function () {
       if (DOTTIE.wired !== 'co30-adapter') {
