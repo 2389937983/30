@@ -692,11 +692,15 @@ body.mono .set-av{background:linear-gradient(150deg,#e6e6e6,#cfcfcf);color:#5a5a
    仍允许视觉视口平移；根元素这一条把横向滚动的口子彻底关掉。 */
 html{overflow-x:hidden;max-width:100%}
 
-/* 2026-10-17 用户要求「界面可以放大缩小，去掉」——禁掉**双击放大**（并顺带消掉双击的 300ms 延迟）。
-   ⚠️ 用 `manipulation` 而不是 `none`/`pan-x pan-y`：它只去掉双击缩放，**保留纵向滚动与点按**，
-      否则会话/设置页里那些内部滚动区会一起失灵。
-   ⚠️ 捏合缩放由上面 meta 的 user-scalable=no/maximum-scale=1 关；iOS 忽略 meta ⇒ 另加 gesture* 守卫。 */
-html,body{touch-action:manipulation}
+/* 2026-10-17 用户要求「界面可以放大缩小，去掉」——手机端禁止缩放。
+   ⚠️ 用 `pan-x pan-y`，**不要用 `manipulation`**（上一版就是这里错的，客户第二次反馈「还是可以双指放大」）：
+      `manipulation` 的规范语义是「允许平移 **和捏合缩放**，只禁掉双击缩放」—— 它**不挡捏合**；
+      `pan-x pan-y` 才是不含 `pinch-zoom` 的那一个，捏合与双击缩放**一起**禁掉，而**纵向/横向平移照旧保留**
+      （所以内部滚动区不受影响）。用 `none` 才是过度禁用（连滚动一起废掉），也不要。
+   ⚠️ 只靠 meta 的 user-scalable=no 是不够的：**App 内嵌浏览器（微信/QQ 等 WebView）常常忽略它**，
+      客户截图里就是从内嵌浏览器打开的 github.io 页面 —— 所以这一层 CSS 才是真正兜住的地方。
+   ⚠️ iOS 连 touch-action 也不完全认 ⇒ 另有 gesture* 与双指 touchmove 两个 JS 守卫（见 03_shell.js）。 */
+html,body{touch-action:pan-x pan-y}
 </style>
 </head>
 <body>
@@ -1139,14 +1143,24 @@ html,body{touch-action:manipulation}
     window.addEventListener('resize', function () { fit(); fitSoon(); });
     window.addEventListener('orientationchange', function () { fit(); fitSoon(); });
     window.addEventListener('pageshow', fit);
-    /* 手机端禁止缩放（用户 2026-10-17：「界面可以放大缩小，去掉」）。
-       三层里的第三层，专治 iOS：iOS Safari 从 iOS 10 起**刻意忽略** meta 的 user-scalable=no，
-       但它仍然派发私有的 gesture* 事件 —— 在这三个事件上 preventDefault 就能挡住捏合缩放。
-       `{passive:false}` 必须写：被动监听器里 preventDefault 不生效（会静默失效，看着像"没接上"）。
-       安卓那边 meta 已经生效，这一层是冗余兜底，对本壳无副作用（只在双指手势时触发）。 */
+    /* 手机端禁止缩放（用户 2026-10-17：「界面可以放大缩小，去掉」；当日二次反馈「还是可以双指放大」后补齐）。
+       四层，一层都不能少，因为**不同引擎漏的层不一样**：
+         ① meta 的 maximum-scale=1,user-scalable=no —— 安卓 Chrome 认；
+         ② html,body{touch-action:pan-x pan-y} —— 不含 pinch-zoom 的那一个值（`manipulation` 是**允许**捏合的，
+            上一版用错，见 01_shell_head.html 注），Chromium 系 WebView 认；
+         ③ gesture* 守卫 —— iOS Safari 从 iOS 10 起**刻意忽略** user-scalable=no，只能靠它；
+         ④ 双指 touchmove 守卫（下面第二个监听器）—— **App 内嵌浏览器（微信/QQ/微博等 WebView）**
+            常常连 meta 带 touch-action 一起忽略，这时只有"双指时 preventDefault"这一招还管用
+            （客户截图里就是从内嵌浏览器打开 github.io 的，②③ 都没兜住）。
+       ⚠️ `{passive:false}` 必须写：被动监听器里 preventDefault 不生效（静默失效，看着像"没接上"）。
+       ⚠️ ④ 只在 `touches.length > 1` 时拦 —— 单指滑动**绝不能拦**，否则内部滚动区会一起失灵。
+          这条"不误伤"是有判据钉着的（T15c：单指 touchmove 不许被 preventDefault）。 */
     ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
       document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
     });
+    document.addEventListener('touchmove', function (e) {
+      if (e.touches && e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
     /* 接线自检：接入层接上时必须置 wired，且主屏数据要拿得到 */
     setTimeout(function () {
       if (DOTTIE.wired !== 'co30-adapter') {
